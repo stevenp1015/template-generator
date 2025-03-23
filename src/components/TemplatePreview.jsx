@@ -1,29 +1,37 @@
 import { useMemo } from "react";
 
 export const TemplatePreview = ({ template }) => {
+  // Move useMemo outside the conditional
+  const colorMapping = useMemo(() => {
+    if (!template || !template.colors)
+      return {
+        primary: "#000000",
+        secondary: "#000000",
+        accent: "#000000",
+        background: "#ffffff",
+        text: "#333333",
+      };
+
+    return {
+      primary: template.colors[0],
+      secondary: template.colors[1] || template.colors[0],
+      accent: template.colors[2] || template.colors[0],
+      background: template.colors[3] || "#ffffff",
+      text: template.colors[4] || "#333333",
+    };
+  }, [template]);
+
   if (!template)
     return (
       <div className="border p-8 text-center">No template generated yet</div>
     );
 
-  const { colors, typography, layout, decorativeElements } = template;
+  const { typography, layout, decorativeElements } = template;
 
   // Function to map percentage-based coordinates to pixel values
   const scaleCoords = (value, dimension, unit = "px") => {
     return `calc(${value}% ${unit})`;
   };
-
-  // Map color palette to specific UI elements
-  const colorMapping = useMemo(
-    () => ({
-      primary: colors[0],
-      secondary: colors[1] || colors[0],
-      accent: colors[2] || colors[0],
-      background: colors[3] || "#ffffff",
-      text: colors[4] || "#333333",
-    }),
-    [colors]
-  );
 
   // Render a specific section of the template
   const renderSection = (section) => {

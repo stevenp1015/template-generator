@@ -42,16 +42,22 @@ export const useQwenAPI = () => {
         try {
           // Parse the response as JSON
           setAiSuggestions(JSON.parse(data.choices[0].message.content));
-        } catch (e) {
-          // If parsing fails, try to extract JSON using regex
-          const jsonMatch =
-            data.choices[0].message.content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            setAiSuggestions(JSON.parse(jsonMatch[0]));
-          } else {
-            throw new Error("Could not parse Qwen API response as JSON");
-          }
-        }
+        } 
+catch (error) {
+  console.error("Error calling Qwen API:", error);
+  // Return default suggestions if API call fails
+  setAiSuggestions({
+    style: "minimal",
+    colorScheme: "monochromatic",
+    typography: "Modern Sans",
+    layout: "classic-document",
+    designNotes: [
+      "Keep the design clean and minimal for readability",
+      "Use white space effectively to create visual hierarchy",
+      "Consider using subtle graphical elements for visual interest",
+    ],
+  });
+} 
       } else {
         throw new Error("Invalid API response format");
       }

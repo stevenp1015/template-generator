@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import {
   Download,
   Sliders,
@@ -67,11 +67,18 @@ const App = () => {
   );
 
   // Debounced handlers
+
+  // Fix useCallback dependencies
   const handleHueChange = useCallback(
-    debounce((hue) => {
-      setStyleOptions((prev) => ({ ...prev, baseHue: parseInt(hue) }));
-    }, 100),
-    []
+    (hue) => { // Define the function directly within useCallback
+      debounce(
+        (actualHue) => { // Debounced function is now inside
+          setStyleOptions((prev) => ({ ...prev, baseHue: parseInt(actualHue) }));
+        },
+        100
+      )(hue); // Immediately invoke the debounced function with hue
+    },
+    [setStyleOptions] // Now debounce is a dependency
   );
 
   // Apply AI suggestions
