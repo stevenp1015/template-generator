@@ -1,7 +1,9 @@
+/* src/index.css */
 @import "tailwindcss";
 
 @layer theme {
   :root {
     --font-sans: system-ui, sans-serif;
+    --spacing: 0.25rem;
   }
 }

@@ -1,469 +1,694 @@
 // src/utils/designUtils.js
-// This contains all the utility functions for generating design elements
+// A comprehensive set of utilities for generating design elements
 
-// Color generation utility
-export const ColorGenerator = {
+// =================================================================
+// COLOR GENERATOR
+// =================================================================
+
+export class ColorGenerator {
   // Convert HSL to RGB
-  hslToRgb(h, s, l) {
-    h /= 360;
+  static hslToRgb(h, s, l) {
     s /= 100;
     l /= 100;
+
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
     let r, g, b;
 
-    if (s === 0) {
-      r = g = b = l; // achromatic
-    } else {
-      const hue2rgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-      };
-
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1 / 3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1 / 3);
+    if (0 <= h && h < 60) {
+      [r, g, b] = [c, x, 0];
+    } else if (60 <= h && h < 120) {
+      [r, g, b] = [x, c, 0];
+    } else if (120 <= h && h < 180) {
+      [r, g, b] = [0, c, x];
+    } else if (180 <= h && h < 240) {
+      [r, g, b] = [0, x, c];
+    } else if (240 <= h && h < 300) {
+      [r, g, b] = [x, 0, c];
+    } else if (300 <= h && h < 360) {
+      [r, g, b] = [c, 0, x];
     }
 
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-  },
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
 
-  // Convert RGB to Hex
-  rgbToHex(r, g, b) {
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  },
+    return [r, g, b];
+  }
 
-  // Generate a palette based on color theory
-  generatePalette(baseHue, scheme) {
-    const palette = [];
+  // Convert RGB to HEX
+  static rgbToHex(r, g, b) {
+    return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+  }
 
-    // Base color at 50% saturation, 50% lightness
-    const [r, g, b] = this.hslToRgb(baseHue, 70, 50);
-    const baseColor = this.rgbToHex(r, g, b);
-    palette.push(baseColor);
+  // Generate a color palette based on a base hue and color scheme
+  static generatePalette(baseHue, scheme, count = 5) {
+    // Normalize hue to 0-359
+    baseHue = ((baseHue % 360) + 360) % 360;
 
-    // Generate additional colors based on color theory
     switch (scheme) {
       case "monochromatic":
-        // Add lighter and darker versions of the base color
-        palette.push(this.rgbToHex(...this.hslToRgb(baseHue, 60, 70))); // Lighter
-        palette.push(this.rgbToHex(...this.hslToRgb(baseHue, 80, 30))); // Darker
-        palette.push("#ffffff"); // White for background
-        palette.push("#333333"); // Dark gray for text
-        break;
-
+        return this.generateMonochromatic(baseHue, count);
       case "complementary":
-        // Add the complementary color (opposite on the color wheel)
-        const complementaryHue = (baseHue + 180) % 360;
-        palette.push(this.rgbToHex(...this.hslToRgb(complementaryHue, 70, 50)));
-        palette.push(this.rgbToHex(...this.hslToRgb(baseHue, 50, 80))); // Light version of base
-        palette.push("#ffffff");
-        palette.push("#333333");
-        break;
-
+        return this.generateComplementary(baseHue, count);
       case "analogous":
-        // Add colors adjacent to the base color on the color wheel
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((baseHue + 30) % 360, 70, 50))
-        );
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((baseHue - 30) % 360, 70, 50))
-        );
-        palette.push("#ffffff");
-        palette.push("#333333");
-        break;
-
+        return this.generateAnalogous(baseHue, count);
       case "triadic":
-        // Add colors at 120° intervals around the color wheel
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((baseHue + 120) % 360, 70, 50))
-        );
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((baseHue + 240) % 360, 70, 50))
-        );
-        palette.push("#ffffff");
-        palette.push("#333333");
-        break;
-
+        return this.generateTriadic(baseHue, count);
       case "split-complementary":
-        // Add colors adjacent to the complementary color
-        const complement = (baseHue + 180) % 360;
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((complement + 30) % 360, 70, 50))
-        );
-        palette.push(
-          this.rgbToHex(...this.hslToRgb((complement - 30) % 360, 70, 50))
-        );
-        palette.push("#ffffff");
-        palette.push("#333333");
-        break;
-
+        return this.generateSplitComplementary(baseHue, count);
       default:
-        // Default to monochromatic if scheme is not recognized
-        palette.push(this.rgbToHex(...this.hslToRgb(baseHue, 60, 70)));
-        palette.push(this.rgbToHex(...this.hslToRgb(baseHue, 80, 30)));
-        palette.push("#ffffff");
-        palette.push("#333333");
+        return this.generateMonochromatic(baseHue, count);
+    }
+  }
+
+  // Generate a monochromatic color scheme
+  static generateMonochromatic(baseHue, count = 5) {
+    const colors = [];
+    const saturation = 70; // Base saturation
+
+    // Generate colors with varying lightness
+    for (let i = 0; i < count; i++) {
+      // Distribute lightness values from light to dark (85% to 25%)
+      const lightness = 85 - i * (60 / (count - 1));
+      const [r, g, b] = this.hslToRgb(baseHue, saturation, lightness);
+      colors.push(this.rgbToHex(r, g, b));
     }
 
-    return palette;
-  },
-};
+    return colors;
+  }
 
-// Typography generation utility
-export const TypographyGenerator = {
-  fontPairings: [
+  // Generate complementary colors (opposite on the color wheel)
+  static generateComplementary(baseHue, count = 5) {
+    const colors = [];
+    const complementaryHue = (baseHue + 180) % 360;
+
+    // Add the base color
+    const [r1, g1, b1] = this.hslToRgb(baseHue, 70, 60);
+    colors.push(this.rgbToHex(r1, g1, b1));
+
+    // Add a lighter version of the base color
+    const [r2, g2, b2] = this.hslToRgb(baseHue, 60, 75);
+    colors.push(this.rgbToHex(r2, g2, b2));
+
+    // Add the complementary color
+    const [r3, g3, b3] = this.hslToRgb(complementaryHue, 70, 60);
+    colors.push(this.rgbToHex(r3, g3, b3));
+
+    // Add a lighter version of the complementary color
+    const [r4, g4, b4] = this.hslToRgb(complementaryHue, 60, 75);
+    colors.push(this.rgbToHex(r4, g4, b4));
+
+    // Add a neutral color
+    const [r5, g5, b5] = this.hslToRgb(baseHue, 15, 90);
+    colors.push(this.rgbToHex(r5, g5, b5));
+
+    return colors;
+  }
+
+  // Generate analogous colors (adjacent on the color wheel)
+  static generateAnalogous(baseHue, count = 5) {
+    const colors = [];
+    const hueStep = 30;
+
+    for (let i = 0; i < count; i++) {
+      // Distribute hues around the base hue (-2*hueStep to +2*hueStep)
+      const hue = (baseHue + hueStep * (i - Math.floor(count / 2))) % 360;
+      const saturation = 70 - Math.abs(i - Math.floor(count / 2)) * 10;
+      const lightness = 60 - Math.abs(i - Math.floor(count / 2)) * 5;
+
+      const [r, g, b] = this.hslToRgb(hue, saturation, lightness);
+      colors.push(this.rgbToHex(r, g, b));
+    }
+
+    return colors;
+  }
+
+  // Generate triadic colors (three equally spaced colors on the wheel)
+  static generateTriadic(baseHue, count = 5) {
+    const colors = [];
+    const triad1 = baseHue;
+    const triad2 = (baseHue + 120) % 360;
+    const triad3 = (baseHue + 240) % 360;
+
+    // Base color
+    const [r1, g1, b1] = this.hslToRgb(triad1, 70, 60);
+    colors.push(this.rgbToHex(r1, g1, b1));
+
+    // Second triadic color
+    const [r2, g2, b2] = this.hslToRgb(triad2, 70, 60);
+    colors.push(this.rgbToHex(r2, g2, b2));
+
+    // Third triadic color
+    const [r3, g3, b3] = this.hslToRgb(triad3, 70, 60);
+    colors.push(this.rgbToHex(r3, g3, b3));
+
+    // Add lighter and darker versions to fill out the palette
+    const [r4, g4, b4] = this.hslToRgb(triad1, 50, 80);
+    colors.push(this.rgbToHex(r4, g4, b4));
+
+    const [r5, g5, b5] = this.hslToRgb(triad1, 30, 95);
+    colors.push(this.rgbToHex(r5, g5, b5));
+
+    return colors;
+  }
+
+  // Generate split-complementary scheme
+  static generateSplitComplementary(baseHue, count = 5) {
+    const colors = [];
+    const complementaryHue = (baseHue + 180) % 360;
+    const split1 = (complementaryHue - 30 + 360) % 360;
+    const split2 = (complementaryHue + 30) % 360;
+
+    // Base color
+    const [r1, g1, b1] = this.hslToRgb(baseHue, 70, 60);
+    colors.push(this.rgbToHex(r1, g1, b1));
+
+    // First split color
+    const [r2, g2, b2] = this.hslToRgb(split1, 70, 60);
+    colors.push(this.rgbToHex(r2, g2, b2));
+
+    // Second split color
+    const [r3, g3, b3] = this.hslToRgb(split2, 70, 60);
+    colors.push(this.rgbToHex(r3, g3, b3));
+
+    // Lighter version of base color
+    const [r4, g4, b4] = this.hslToRgb(baseHue, 50, 80);
+    colors.push(this.rgbToHex(r4, g4, b4));
+
+    // Neutral color
+    const [r5, g5, b5] = this.hslToRgb(baseHue, 20, 95);
+    colors.push(this.rgbToHex(r5, g5, b5));
+
+    return colors;
+  }
+
+  // Generate a random color palette based on style
+  static generateStyleBasedPalette(style) {
+    const baseHue = Math.floor(Math.random() * 360);
+
+    switch (style) {
+      case "corporate":
+        // Corporate palettes often use blues, grays, with muted colors
+        return this.generatePalette((baseHue + 210) % 360, "monochromatic");
+      case "creative":
+        // Creative styles often use vibrant complementary or triadic schemes
+        return this.generatePalette(baseHue, "triadic");
+      case "minimal":
+        // Minimal styles often have subtle analogous colors
+        return this.generatePalette(baseHue, "analogous");
+      case "abstract":
+        // Abstract styles can use bold split-complementary
+        return this.generatePalette(baseHue, "split-complementary");
+      default:
+        return this.generatePalette(baseHue, "monochromatic");
+    }
+  }
+}
+
+// =================================================================
+// TYPOGRAPHY GENERATOR
+// =================================================================
+
+export class TypographyGenerator {
+  // Font pairings (heading/body combinations)
+  static fontPairings = [
     {
       name: "Classic Serif/Sans",
-      fontFamily: {
-        heading: "'Georgia', serif",
-        body: "'Arial', sans-serif",
-      },
-      characterization: "Traditional and balanced",
+      heading: "'Georgia', serif",
+      body: "'Arial', sans-serif",
+      characterization: "Traditional, balanced contrast",
     },
     {
       name: "Modern Sans",
-      fontFamily: {
-        heading: "'Montserrat', sans-serif",
-        body: "'Open Sans', sans-serif",
-      },
-      characterization: "Clean and contemporary",
+      heading: "'Montserrat', sans-serif",
+      body: "'Open Sans', sans-serif",
+      characterization: "Clean, contemporary",
     },
     {
       name: "Corporate Professional",
-      fontFamily: {
-        heading: "'Roboto', sans-serif",
-        body: "'Roboto', sans-serif",
-      },
-      characterization: "Consistent and professional",
+      heading: "'Helvetica Neue', sans-serif",
+      body: "'Roboto', sans-serif",
+      characterization: "Sleek, professional, reliable",
     },
     {
       name: "Elegant Contrast",
-      fontFamily: {
-        heading: "'Playfair Display', serif",
-        body: "'Raleway', sans-serif",
-      },
-      characterization: "Sophisticated and refined",
+      heading: "'Playfair Display', serif",
+      body: "'Source Sans Pro', sans-serif",
+      characterization: "Sophisticated, dramatic contrast",
     },
     {
       name: "Creative Modern",
-      fontFamily: {
-        heading: "'Poppins', sans-serif",
-        body: "'Work Sans', sans-serif",
-      },
-      characterization: "Fresh and creative",
+      heading: "'Poppins', sans-serif",
+      body: "'Work Sans', sans-serif",
+      characterization: "Fresh, contemporary, innovative",
     },
     {
       name: "Technical Clarity",
-      fontFamily: {
-        heading: "'Source Sans Pro', sans-serif",
-        body: "'Source Sans Pro', sans-serif",
-      },
-      characterization: "Clear and technical",
+      heading: "'IBM Plex Sans', sans-serif",
+      body: "'IBM Plex Serif', serif",
+      characterization: "Precise, logical, technical",
     },
     {
       name: "Friendly Professional",
-      fontFamily: {
-        heading: "'Nunito', sans-serif",
-        body: "'Lato', sans-serif",
-      },
-      characterization: "Approachable and professional",
+      heading: "'Nunito', sans-serif",
+      body: "'Lato', sans-serif",
+      characterization: "Approachable, warm, trustworthy",
     },
-  ],
+  ];
 
-  // Generate a complete typography system
-  generateTypographySystem(pairingName) {
+  // Font scale presets (modular scales for consistent sizing)
+  static fontScales = {
+    default: {
+      base: 16,
+      ratio: 1.25, // Major third
+    },
+    compact: {
+      base: 14,
+      ratio: 1.2, // Minor third
+    },
+    dramatic: {
+      base: 16,
+      ratio: 1.5, // Perfect fifth
+    },
+  };
+
+  // Generate typography system based on pairing name
+  static generateTypographySystem(pairingName) {
+    // Find the requested font pairing
     const pairing =
       this.fontPairings.find((p) => p.name === pairingName) ||
       this.fontPairings[0];
 
-    return {
-      fontFamily: pairing.fontFamily,
-      characterization: pairing.characterization,
-      fontSizes: {
-        xs: 12,
-        sm: 14,
-        base: 16,
-        lg: 18,
-        xl: 20,
-        "2xl": 24,
-        "3xl": 30,
-        "4xl": 36,
-        "5xl": 48,
-      },
-      fontWeights: {
-        normal: 400,
-        medium: 500,
-        semibold: 600,
-        bold: 700,
-      },
-      lineHeights: {
-        tight: 1.2,
-        normal: 1.5,
-        relaxed: 1.75,
-      },
-    };
-  },
-};
+    // Determine scale based on pairing style
+    let scaleType = "default";
+    if (pairingName.includes("Compact") || pairingName.includes("Technical")) {
+      scaleType = "compact";
+    } else if (
+      pairingName.includes("Elegant") ||
+      pairingName.includes("Creative")
+    ) {
+      scaleType = "dramatic";
+    }
 
-// Layout generation utility
-export const LayoutGenerator = {
-  gridLayouts: [
+    const scale = this.fontScales[scaleType];
+
+    // Generate modular typographic scale
+    const fontSize = {
+      xs: Math.round(scale.base / scale.ratio),
+      sm: Math.round(scale.base / Math.sqrt(scale.ratio)),
+      base: scale.base,
+      lg: Math.round(scale.base * Math.sqrt(scale.ratio)),
+      xl: Math.round(scale.base * scale.ratio),
+      "2xl": Math.round(scale.base * scale.ratio * scale.ratio),
+      "3xl": Math.round(scale.base * scale.ratio * scale.ratio * scale.ratio),
+    };
+
+    // Generate line heights
+    const lineHeight = {
+      tight: 1.2,
+      normal: 1.5,
+      relaxed: 1.75,
+    };
+
+    // Generate font weights
+    const fontWeight = {
+      normal: 400,
+      medium: 500,
+      semibold: 600,
+      bold: 700,
+    };
+
+    return {
+      fontFamily: {
+        heading: pairing.heading,
+        body: pairing.body,
+      },
+      fontSizes: fontSize,
+      lineHeight,
+      fontWeight,
+      characterization: pairing.characterization,
+    };
+  }
+
+  // Get typography system appropriate for a specific style
+  static getStyleTypography(style) {
+    switch (style) {
+      case "corporate":
+        return this.generateTypographySystem("Corporate Professional");
+      case "creative":
+        return this.generateTypographySystem("Creative Modern");
+      case "minimal":
+        return this.generateTypographySystem("Modern Sans");
+      case "abstract":
+        return this.generateTypographySystem("Elegant Contrast");
+      default:
+        return this.generateTypographySystem("Modern Sans");
+    }
+  }
+}
+
+// =================================================================
+// LAYOUT GENERATOR
+// =================================================================
+
+export class LayoutGenerator {
+  // Predefined grid layouts
+  static gridLayouts = [
     {
       name: "classic-document",
       sections: [
-        { id: "header", type: "header", x: 0, y: 0, width: 100, height: 15 },
-        {
-          id: "main-content",
-          type: "content",
-          x: 0,
-          y: 15,
-          width: 100,
-          height: 75,
-        },
-        { id: "footer", type: "footer", x: 0, y: 90, width: 100, height: 10 },
+        { id: "header", type: "header", x: 5, y: 5, width: 90, height: 15 },
+        { id: "content", type: "content", x: 5, y: 25, width: 90, height: 60 },
+        { id: "footer", type: "footer", x: 5, y: 90, width: 90, height: 5 },
       ],
     },
     {
       name: "modern-split",
       sections: [
-        { id: "header", type: "header", x: 0, y: 0, width: 100, height: 10 },
-        { id: "sidebar", type: "sidebar", x: 0, y: 10, width: 25, height: 80 },
-        {
-          id: "main-content",
-          type: "content",
-          x: 25,
-          y: 10,
-          width: 75,
-          height: 80,
-        },
-        { id: "footer", type: "footer", x: 0, y: 90, width: 100, height: 10 },
+        { id: "header", type: "header", x: 5, y: 5, width: 90, height: 10 },
+        { id: "sidebar", type: "sidebar", x: 5, y: 20, width: 25, height: 70 },
+        { id: "content", type: "content", x: 35, y: 20, width: 60, height: 70 },
+        { id: "footer", type: "footer", x: 5, y: 95, width: 90, height: 5 },
       ],
     },
     {
       name: "asymmetric",
       sections: [
-        { id: "header", type: "header", x: 0, y: 0, width: 100, height: 15 },
-        { id: "sidebar", type: "sidebar", x: 70, y: 15, width: 30, height: 75 },
+        { id: "header", type: "header", x: 15, y: 5, width: 70, height: 15 },
+        { id: "sidebar", type: "sidebar", x: 5, y: 25, width: 30, height: 60 },
+        { id: "content", type: "content", x: 40, y: 25, width: 55, height: 50 },
         {
-          id: "main-content",
+          id: "contentBottom",
           type: "content",
-          x: 0,
-          y: 15,
-          width: 70,
-          height: 75,
+          x: 40,
+          y: 80,
+          width: 55,
+          height: 10,
         },
-        { id: "footer", type: "footer", x: 0, y: 90, width: 100, height: 10 },
       ],
     },
     {
       name: "presentation",
       sections: [
-        { id: "header", type: "header", x: 0, y: 0, width: 100, height: 20 },
+        { id: "header", type: "header", x: 10, y: 5, width: 80, height: 20 },
         {
-          id: "main-content",
+          id: "contentLeft",
           type: "content",
           x: 10,
-          y: 25,
-          width: 80,
+          y: 30,
+          width: 35,
           height: 60,
         },
-        { id: "footer", type: "footer", x: 0, y: 90, width: 100, height: 10 },
+        {
+          id: "contentRight",
+          type: "content",
+          x: 55,
+          y: 30,
+          width: 35,
+          height: 60,
+        },
+        { id: "footer", type: "footer", x: 10, y: 95, width: 80, height: 5 },
       ],
     },
     {
       name: "infographic",
       sections: [
-        { id: "header", type: "header", x: 0, y: 0, width: 100, height: 15 },
+        { id: "header", type: "header", x: 5, y: 5, width: 90, height: 10 },
+        { id: "section1", type: "content", x: 5, y: 20, width: 90, height: 20 },
+        { id: "section2", type: "content", x: 5, y: 45, width: 40, height: 20 },
         {
-          id: "section-1",
-          type: "content",
-          x: 0,
-          y: 15,
-          width: 100,
-          height: 25,
-        },
-        {
-          id: "section-2",
-          type: "content",
-          x: 0,
-          y: 40,
-          width: 50,
-          height: 25,
-        },
-        {
-          id: "section-3",
+          id: "section3",
           type: "content",
           x: 50,
-          y: 40,
-          width: 50,
-          height: 25,
+          y: 45,
+          width: 45,
+          height: 20,
         },
-        { id: "footer", type: "footer", x: 0, y: 65, width: 100, height: 35 },
+        { id: "section4", type: "content", x: 5, y: 70, width: 90, height: 20 },
+        { id: "footer", type: "footer", x: 5, y: 95, width: 90, height: 5 },
       ],
     },
-  ],
+  ];
 
-  // Generate subtle variations in the layout
-  generateLayoutVariation(baseLayout, variationFactor = 0.1) {
-    // Clone the base layout to avoid modifying the original
-    const layout = JSON.parse(JSON.stringify(baseLayout));
+  // Generate layout variation by applying controlled randomness
+  static generateLayoutVariation(baseLayout, variationFactor = 0.1) {
+    const variation = JSON.parse(JSON.stringify(baseLayout));
 
-    // Apply small random variations to section positions and sizes
-    layout.sections = layout.sections.map((section) => {
-      // Don't vary too much - just add a little randomness
-      const variation = (max) =>
-        (Math.random() * max * 2 - max) * variationFactor;
-
-      // Make sure dimensions stay within reasonable bounds
-      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
-      // Apply variations
-      const varied = {
+    // Apply slight variations to each section's position and size
+    variation.sections = variation.sections.map((section) => {
+      return {
         ...section,
-        x: clamp(section.x + variation(5), 0, 100 - section.width),
-        y: clamp(section.y + variation(5), 0, 100 - section.height),
-        width: clamp(
-          section.width + variation(5),
-          section.width * 0.9,
-          section.width * 1.1
+        x: this.applyVariation(
+          section.x,
+          variationFactor,
+          1,
+          98 - section.width
         ),
-        height: clamp(
-          section.height + variation(5),
-          section.height * 0.9,
-          section.height * 1.1
+        y: this.applyVariation(
+          section.y,
+          variationFactor,
+          1,
+          98 - section.height
+        ),
+        width: this.applyVariation(
+          section.width,
+          variationFactor * 0.5,
+          10,
+          98
+        ),
+        height: this.applyVariation(
+          section.height,
+          variationFactor * 0.5,
+          5,
+          80
         ),
       };
-
-      return varied;
     });
 
-    return layout;
-  },
-};
+    // Ensure sections don't overlap substantially
+    this.resolveOverlaps(variation.sections);
 
-// Graphics generation utility
-export const GraphicsGenerator = {
-  // Generate decorative SVG elements based on style
-  generateDecorativeElements(style, colors, seed = Math.random()) {
-    // Use the seed for consistent randomness
-    const seededRandom = () => {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    };
+    return variation;
+  }
 
-    const elements = [];
+  // Apply controlled random variation to a value
+  static applyVariation(value, factor, min, max) {
+    const variation = value * factor;
+    const randomVariation = (Math.random() * 2 - 1) * variation;
+    return Math.max(min, Math.min(max, value + randomVariation));
+  }
 
+  // Simple algorithm to resolve section overlaps
+  static resolveOverlaps(sections) {
+    for (let i = 0; i < sections.length; i++) {
+      for (let j = i + 1; j < sections.length; j++) {
+        if (this.sectionsOverlap(sections[i], sections[j])) {
+          // Move the second section down slightly
+          sections[j].y = Math.min(95 - sections[j].height, sections[j].y + 5);
+        }
+      }
+    }
+  }
+
+  // Check if two sections overlap
+  static sectionsOverlap(sectionA, sectionB) {
+    return !(
+      sectionA.x + sectionA.width < sectionB.x ||
+      sectionB.x + sectionB.width < sectionA.x ||
+      sectionA.y + sectionA.height < sectionB.y ||
+      sectionB.y + sectionB.height < sectionA.y
+    );
+  }
+
+  // Get a layout appropriate for a specific style
+  static getStyleLayout(style) {
     switch (style) {
       case "corporate":
-        // Generate corporate-style elements: lines, squares, etc.
-        elements.push({
-          name: "corporate-lines",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="0" y1="50" x2="100" y2="50" stroke="${
-                    colors[0]
-                  }" stroke-width="2" />
-                  <line x1="0" y1="60" x2="80" y2="60" stroke="${
-                    colors[1] || colors[0]
-                  }" stroke-width="2" />
-                  <line x1="0" y1="70" x2="60" y2="70" stroke="${
-                    colors[2] || colors[0]
-                  }" stroke-width="2" />
-                </svg>`,
-        });
-        elements.push({
-          name: "corporate-square",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="10" y="10" width="80" height="80" fill="none" stroke="${
-                    colors[0]
-                  }" stroke-width="2" />
-                  <rect x="25" y="25" width="50" height="50" fill="none" stroke="${
-                    colors[1] || colors[0]
-                  }" stroke-width="1" />
-                </svg>`,
-        });
-        break;
-
+        return (
+          this.gridLayouts.find((l) => l.name === "classic-document") ||
+          this.gridLayouts[0]
+        );
       case "creative":
-        // Generate creative-style elements: curves, circles, etc.
-        elements.push({
-          name: "creative-circles",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="${
-                    colors[0]
-                  }" stroke-width="2" />
-                  <circle cx="50" cy="50" r="30" fill="none" stroke="${
-                    colors[1] || colors[0]
-                  }" stroke-width="1.5" />
-                  <circle cx="50" cy="50" r="20" fill="none" stroke="${
-                    colors[2] || colors[0]
-                  }" stroke-width="1" />
-                </svg>`,
-        });
-        elements.push({
-          name: "creative-wave",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0,50 Q25,30 50,50 T100,50" fill="none" stroke="${
-                    colors[0]
-                  }" stroke-width="2" />
-                  <path d="M0,60 Q25,40 50,60 T100,60" fill="none" stroke="${
-                    colors[1] || colors[0]
-                  }" stroke-width="1.5" />
-                </svg>`,
-        });
-        break;
-
+        return (
+          this.gridLayouts.find((l) => l.name === "asymmetric") ||
+          this.gridLayouts[2]
+        );
       case "minimal":
-        // Generate minimal-style elements: single lines, dots, etc.
-        elements.push({
-          name: "minimal-line",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="20" y1="50" x2="80" y2="50" stroke="${colors[0]}" stroke-width="1" />
-                </svg>`,
-        });
-        elements.push({
-          name: "minimal-dot",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="5" fill="${colors[0]}" />
-                </svg>`,
-        });
-        break;
-
+        return (
+          this.gridLayouts.find((l) => l.name === "modern-split") ||
+          this.gridLayouts[1]
+        );
       case "abstract":
-        // Generate abstract-style elements: irregular shapes, etc.
-        elements.push({
-          name: "abstract-shape",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <polygon points="10,10 90,30 50,90 10,50" fill="none" stroke="${colors[0]}" stroke-width="2" />
-                </svg>`,
-        });
-        elements.push({
-          name: "abstract-lines",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="20" y1="20" x2="80" y2="80" stroke="${
-                    colors[0]
-                  }" stroke-width="2" />
-                  <line x1="20" y1="80" x2="80" y2="20" stroke="${
-                    colors[1] || colors[0]
-                  }" stroke-width="2" />
-                </svg>`,
-        });
-        break;
-
+        return (
+          this.gridLayouts.find((l) => l.name === "infographic") ||
+          this.gridLayouts[4]
+        );
       default:
-        // Default to minimal style
-        elements.push({
-          name: "default-element",
-          svg: `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="30" fill="none" stroke="${colors[0]}" stroke-width="1" />
-                </svg>`,
-        });
+        return this.gridLayouts[0];
+    }
+  }
+}
+
+// =================================================================
+// GRAPHICS GENERATOR
+// =================================================================
+
+export class GraphicsGenerator {
+  // Base shapes for decorative elements
+  static baseShapes = {
+    circle: (size, color) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="${size / 2}" fill="${color}" />
+      </svg>
+    `,
+    square: (size, color) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="${(100 - size) / 2}" y="${
+      (100 - size) / 2
+    }" width="${size}" height="${size}" fill="${color}" />
+      </svg>
+    `,
+    triangle: (size, color) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="50,${50 - size / 2} ${50 + size / 2},${
+      50 + size / 2
+    } ${50 - size / 2},${50 + size / 2}" fill="${color}" />
+      </svg>
+    `,
+    line: (size, color, rotation) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <line x1="${50 - size / 2}" y1="50" x2="${50 + size / 2}" y2="50" 
+              stroke="${color}" stroke-width="${size / 10}" 
+              transform="rotate(${rotation}, 50, 50)" />
+      </svg>
+    `,
+    wave: (size, color) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 10,50 C 20,${50 - size / 4} 30,${50 + size / 4} 40,50 C 50,${
+      50 - size / 4
+    } 60,${50 + size / 4} 70,50 C 80,${50 - size / 4} 90,${
+      50 + size / 4
+    } 100,50" 
+              stroke="${color}" stroke-width="${size / 15}" fill="none" />
+      </svg>
+    `,
+    dot: (size, color, count = 5, gap = 15) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        ${Array(count)
+          .fill(0)
+          .map(
+            (_, i) =>
+              `<circle cx="${20 + i * gap}" cy="50" r="${
+                size / 10
+              }" fill="${color}" />`
+          )
+          .join("")}
+      </svg>
+    `,
+    cross: (size, color) => `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <line x1="${50 - size / 2}" y1="50" x2="${50 + size / 2}" y2="50" 
+              stroke="${color}" stroke-width="${size / 10}" />
+        <line x1="50" y1="${50 - size / 2}" x2="50" y2="${50 + size / 2}" 
+              stroke="${color}" stroke-width="${size / 10}" />
+      </svg>
+    `,
+  };
+
+  // Generate decorative elements based on style and color palette
+  static generateDecorativeElements(style, colorPalette, seed = Math.random()) {
+    // Use seed for consistent randomization
+    const seededRandom = this.createSeededRandom(seed);
+
+    // Determine style-specific parameters
+    const params = this.getStyleParams(style, seededRandom);
+
+    // Generate consistent set of elements
+    const elements = [];
+
+    for (let i = 0; i < params.count; i++) {
+      const color =
+        colorPalette[Math.floor(seededRandom() * colorPalette.length)];
+      const shapeType =
+        params.shapes[Math.floor(seededRandom() * params.shapes.length)];
+      const size =
+        params.minSize + seededRandom() * (params.maxSize - params.minSize);
+
+      let element;
+      if (shapeType === "line") {
+        const rotation = seededRandom() * 360;
+        element = {
+          type: shapeType,
+          svg: this.baseShapes[shapeType](size, color, rotation),
+        };
+      } else if (shapeType === "dot") {
+        const count = 3 + Math.floor(seededRandom() * 5);
+        const gap = 10 + seededRandom() * 10;
+        element = {
+          type: shapeType,
+          svg: this.baseShapes[shapeType](size, color, count, gap),
+        };
+      } else {
+        element = {
+          type: shapeType,
+          svg: this.baseShapes[shapeType](size, color),
+        };
+      }
+
+      elements.push(element);
     }
 
     return elements;
-  },
-};
+  }
+
+  // Get style-specific parameters for graphic generation
+  static getStyleParams(style, seededRandom) {
+    switch (style) {
+      case "corporate":
+        return {
+          shapes: ["square", "line"],
+          count: 3 + Math.floor(seededRandom() * 2),
+          minSize: 30,
+          maxSize: 60,
+        };
+      case "creative":
+        return {
+          shapes: ["circle", "triangle", "wave", "dot"],
+          count: 5 + Math.floor(seededRandom() * 3),
+          minSize: 40,
+          maxSize: 80,
+        };
+      case "minimal":
+        return {
+          shapes: ["circle", "line", "dot"],
+          count: 2 + Math.floor(seededRandom() * 2),
+          minSize: 20,
+          maxSize: 50,
+        };
+      case "abstract":
+        return {
+          shapes: ["triangle", "circle", "square", "cross", "line"],
+          count: 4 + Math.floor(seededRandom() * 4),
+          minSize: 50,
+          maxSize: 90,
+        };
+      default:
+        return {
+          shapes: ["circle", "square"],
+          count: 3,
+          minSize: 30,
+          maxSize: 60,
+        };
+    }
+  }
+
+  // Create a seeded random number generator for consistent results
+  static createSeededRandom(seed) {
+    return function () {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+  }
+}

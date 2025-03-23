@@ -1,4 +1,6 @@
 // src/App.jsx
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useCallback } from "react";
 import {
   Download,
@@ -26,6 +28,33 @@ import {
 } from "./utils/designUtils";
 
 const App = () => {
+  const handleExport = useCallback(() => {
+    if (!template) return;
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: 'a4'
+  });
+
+  const templateElement = document.querySelector('.template-preview');
+  if (!templateElement) return;
+
+  html2canvas(templateElement).then((canvas) => {
+    const imgData = canvas.toDataURL('image/png');
+    const imgProps = doc.getImageProperties(imgData);
+    const pdfWidth = doc.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    doc.save(`template-${styleOptions.style}-${Date,now()}.pdf`);
+
+
+  }).catch(err => {
+    console.error('Error exporting template:', err);
+  });
+  }, [template, styleOptions.style]);
+  
   // Use custom hook for template generation
   const {
     template,
@@ -319,7 +348,9 @@ const App = () => {
 
             {/* Export Button */}
             <div className="mt-6">
-              <button className="flex items-center justify-center gap-2 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors w-full">
+              <button className="flex items-center justify-center gap-2 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors w-full"
+                onClick={handleExport}
+              >
                 <Download className="w-5 h-5" /> Export Template
               </button>
             </div>

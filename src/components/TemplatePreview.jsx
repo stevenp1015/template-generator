@@ -151,7 +151,7 @@ export const TemplatePreview = ({ template }) => {
   };
 
   return (
-    <div className="relative w-full aspect-[8.5/11] bg-white border shadow-md">
+    <div className="relative w-full aspect-[8.5/11] bg-white border shadow-md template-preview">
       {layout.sections.map((section) => renderSection(section))}
     </div>
   );
