@@ -16,7 +16,7 @@ export const useQwenAPI = () => {
           method: "POST",
           headers: {
             Authorization:
-              "Bearer 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",
+              "Bearer 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",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -37,27 +37,27 @@ export const useQwenAPI = () => {
       );
 
       const data = await response.json();
+      console.log("API Response Data:", data); // Add this line!
 
       if (data.choices && data.choices[0] && data.choices[0].message) {
         try {
           // Parse the response as JSON
           setAiSuggestions(JSON.parse(data.choices[0].message.content));
-        } 
-catch (error) {
-  console.error("Error calling Qwen API:", error);
-  // Return default suggestions if API call fails
-  setAiSuggestions({
-    style: "minimal",
-    colorScheme: "monochromatic",
-    typography: "Modern Sans",
-    layout: "classic-document",
-    designNotes: [
-      "Keep the design clean and minimal for readability",
-      "Use white space effectively to create visual hierarchy",
-      "Consider using subtle graphical elements for visual interest",
-    ],
-  });
-} 
+        } catch (error) {
+          console.error("Error calling Qwen API:", error);
+          // Return default suggestions if API call fails
+          setAiSuggestions({
+            style: "minimal",
+            colorScheme: "monochromatic",
+            typography: "Modern Sans",
+            layout: "classic-document",
+            designNotes: [
+              "Keep the design clean and minimal for readability",
+              "Use white space effectively to create visual hierarchy",
+              "Consider using subtle graphical elements for visual interest",
+            ],
+          });
+        }
       } else {
         throw new Error("Invalid API response format");
       }

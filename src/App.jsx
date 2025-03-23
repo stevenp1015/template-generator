@@ -1,7 +1,5 @@
 // src/App.jsx
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
-import { useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Download,
   Sliders,
@@ -28,33 +26,6 @@ import {
 } from "./utils/designUtils";
 
 const App = () => {
-  const handleExport = useCallback(() => {
-    if (!template) return;
-
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: 'a4'
-  });
-
-  const templateElement = document.querySelector('.template-preview');
-  if (!templateElement) return;
-
-  html2canvas(templateElement).then((canvas) => {
-    const imgData = canvas.toDataURL('image/png');
-    const imgProps = doc.getImageProperties(imgData);
-    const pdfWidth = doc.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    doc.save(`template-${styleOptions.style}-${Date,now()}.pdf`);
-
-
-  }).catch(err => {
-    console.error('Error exporting template:', err);
-  });
-  }, [template, styleOptions.style]);
-  
   // Use custom hook for template generation
   const {
     template,
@@ -96,18 +67,11 @@ const App = () => {
   );
 
   // Debounced handlers
-
-  // Fix useCallback dependencies
   const handleHueChange = useCallback(
-    (hue) => { // Define the function directly within useCallback
-      debounce(
-        (actualHue) => { // Debounced function is now inside
-          setStyleOptions((prev) => ({ ...prev, baseHue: parseInt(actualHue) }));
-        },
-        100
-      )(hue); // Immediately invoke the debounced function with hue
-    },
-    [setStyleOptions] // Now debounce is a dependency
+    debounce((hue) => {
+      setStyleOptions((prev) => ({ ...prev, baseHue: parseInt(hue) }));
+    }, 100),
+    []
   );
 
   // Apply AI suggestions
@@ -122,6 +86,30 @@ const App = () => {
       layout: aiSuggestions.layout || prev.layout,
     }));
   }, [aiSuggestions, setStyleOptions]);
+
+  // Export function
+  const handleExport = useCallback(() => {
+    if (!template) return;
+
+    // For now, just alert - we'll implement PDF export later
+    alert("Export feature coming soon!");
+
+    // When we have html2canvas and jspdf:
+    /*
+    const templateElement = document.querySelector('.template-preview');
+    if (!templateElement) return;
+    
+    html2canvas(templateElement).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`template-${styleOptions.style}-${Date.now()}.pdf`);
+    });
+    */
+  }, [template, styleOptions?.style]);
 
   // Effect to apply suggestions when they change
   useEffect(() => {
@@ -348,7 +336,8 @@ const App = () => {
 
             {/* Export Button */}
             <div className="mt-6">
-              <button className="flex items-center justify-center gap-2 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors w-full"
+              <button
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors w-full"
                 onClick={handleExport}
               >
                 <Download className="w-5 h-5" /> Export Template
