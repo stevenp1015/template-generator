@@ -16,7 +16,7 @@ export const useQwenAPI = () => {
           method: "POST",
           headers: {
             Authorization:
-              "Bearer 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",
+              "Bearer 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",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({

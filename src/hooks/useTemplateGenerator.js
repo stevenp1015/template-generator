@@ -19,35 +19,48 @@ export const useTemplateGenerator = () => {
 
   // Generate a template based on current options
   const generateTemplate = useCallback(() => {
-    // Create a new template using our design utils
-    const newTemplate = {
-      style: styleOptions.style,
-      colors: ColorGenerator.generatePalette(
-        styleOptions.baseHue,
-        styleOptions.colorScheme
-      ),
-      typography: TypographyGenerator.generateTypographySystem(
-        styleOptions.typography
-      ),
-      layout: (() => {
-        const baseLayout =
-          LayoutGenerator.gridLayouts.find(
-            (l) => l.name === styleOptions.layout
-          ) || LayoutGenerator.gridLayouts[0];
-        return LayoutGenerator.generateLayoutVariation(baseLayout, 0.1);
-      })(),
-      decorativeElements: GraphicsGenerator.generateDecorativeElements(
-        styleOptions.style,
-        ColorGenerator.generatePalette(
+    try {
+      // Create a new template using our design utils
+      const newTemplate = {
+        style: styleOptions.style,
+        colors: ColorGenerator.generatePalette(
           styleOptions.baseHue,
           styleOptions.colorScheme
         ),
-        styleOptions.seed
-      ),
-      seed: styleOptions.seed,
-    };
+        typography: TypographyGenerator.generateTypographySystem(
+          styleOptions.typography
+        ),
+        layout: (() => {
+          const baseLayout =
+            LayoutGenerator.gridLayouts.find(
+              (l) => l.name === styleOptions.layout
+            ) || LayoutGenerator.gridLayouts[0];
+          return LayoutGenerator.generateLayoutVariation(baseLayout, 0.1);
+        })(),
+        decorativeElements: GraphicsGenerator.generateDecorativeElements(
+          styleOptions.style,
+          ColorGenerator.generatePalette(
+            styleOptions.baseHue,
+            styleOptions.colorScheme
+          ),
+          styleOptions.seed
+        ),
+        seed: styleOptions.seed,
+      };
 
-    setTemplate(newTemplate);
+      setTemplate(newTemplate);
+    } catch (error) {
+      console.error("Error generating template:", error);
+      // Fallback to a simple template if there's an error
+      setTemplate({
+        style: styleOptions.style,
+        colors: ["#4a6da7", "#6789c0", "#8aa7d6", "#d1ddf0", "#2d3748"],
+        typography: TypographyGenerator.generateTypographySystem("Modern Sans"),
+        layout: LayoutGenerator.gridLayouts[0],
+        decorativeElements: [],
+        seed: styleOptions.seed,
+      });
+    }
   }, [styleOptions]);
 
   // Randomize all options and generate
